@@ -1,1 +1,4 @@
 # polymertl
+
+
+# Getting data
