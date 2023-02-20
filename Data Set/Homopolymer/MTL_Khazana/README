@@ -1,0 +1,14 @@
+This folder contains the dataset (export.csv) for DFT properties (see Table 1) used in the paper "Polymer Informatics with Multi-Task Learning" by Christopher Kuenneth, Arunkumar Chitteth Rajan, Huan Tran, Lihua Chen, Chiho Kim, and Rampi Ramprasad
+
+The eight properties in export.csv are
+
+Eat - atomization energy (eV/atom)
+Xc - crystallization tendency (%)
+Egc - band gap chain (eV)
+Egb - band gap bulk (eV)
+Eea - electron affinity (eV)
+Ei - Ionization energy (eV)
+nc - refractive index DFT (1)
+eps - dielectric constant DFT (1)
+
+02/11/2021
