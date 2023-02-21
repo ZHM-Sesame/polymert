@@ -1,0 +1,11 @@
+wandb
+sklearn
+jupyter
+jupyterlab
+numpy
+scipy
+torch
+pandas
+tqdm
+fire
+gdown
