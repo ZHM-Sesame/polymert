@@ -7,6 +7,7 @@ A machine-learning (ML) implementation that incorporate the information of both 
 
 ## General Use
 training script: test_baseline.ipynb
+
 pip requirements: requirements.txt
 
 tested on Unity. 
