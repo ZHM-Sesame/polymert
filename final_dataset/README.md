@@ -14,6 +14,17 @@ Both copolymers and homopolymers datasets have 2 different property values we pl
 
 Note: The script (Polymer-TL-Dataprep.ipynb) which was used to create these datasets has been included as well.
 
+## Downloading and extracting the dataset
+
+To download and extract the dataset, use the `get_final_dataset.sh` script provided in the repository. Follow these steps:
+
+
+   ```bash
+   #Grant execute permissions to the script:
+   chmod +x get_final_dataset.sh
+   #run the script
+   ./get_final_dataset.sh
+
 References: 
 - The copolymer dataset was created from the Vipea dataset used by [Aldeghi and Coley](https://pubs.rsc.org/en/content/articlelanding/2022/SC/D2SC02839E). It can be found [here](https://github.com/coleygroup/polymer-chemprop-data/tree/main/datasets/vipea).
 - The homopolymer dataset was created from the Georgia Tech's MTL_Khazana dataset found [here](https://khazana.gatech.edu/).  

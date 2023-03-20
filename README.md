@@ -31,3 +31,13 @@ Preprocessing will be implemented later to clean the data.
 | Fullerene Exp.     |                       |                                                        |      |      |      |           |           | 1203        |
 | MTL_Khazana        | Single Smile          | Homopolymer                                            | y    | y    |      |           |           | 6264(comb.) |
 | PolymerGasMembraneML| Single Smile         | Homopolymer                                            |      |      |      |           |           | 776         |
+
+## Downloading and extracting the dataset
+
+To download and extract the collected dataset summarized above, use the `get_data_collect.sh` script provided in the repository. Follow these steps:
+
+   ```bash
+   #Grant execute permissions to the script:
+   chmod +x get_data_collect.sh
+   #run the script
+   ./get_data_collect.sh
