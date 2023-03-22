@@ -1,0 +1,67 @@
+#connect to unity:
+ssh unity
+ssh gypsum-gpu067
+
+## Srun
+srun -c 24 --partition=gypsum-titanx --mem=200G --time=10:00:00 --gres=gpu:1 --pty /bin/bash
+
+cd "baselines/Copolymer"
+cd "baselines/Multitask"
+cd copolymer_informatics
+
+module load conda
+conda activate figo
+conda activate ram
+module load cuda/11.3.1
+module load cuda/10.1.243
+
+python train.py --model RNN --prop ea --data "datasets/Dataset 1.csv"
+
+conda env export > figo.yml
+
+#install poetry
+curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python -
+
+poetry shell
+poetry config virtualenvs.in-project true
+poetry install
+
+poetry lock [--no-update]
+
+
+jupyter notebook --ip=0.0.0.0 --port=8884
+#new terminal:
+ssh zmao_umass_edu@unity.rc.umass.edu -L 8884:node97:8884
+gypsum-gpu085:8884
+#browser
+http://127.0.0.1:8884/?token=6de740949acc6014b36e32b9e8e6e99b4f97a50024558bdf
+
+
+python -m ipykernel install --user --name=ram
+jupyter kernelspec remove ram
+
+pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 torchaudio==0.12.1 --extra-index-url https://download.pytorch.org/whl/cu113
+pip install transformers
+
+
+#show modules
+echo $PATH
+#unload all modulesexi
+module purge
+
+gpustat
+
+#### figotj cmds
+#RNNy
+conda install pandas
+conda install -c conda-forge rdkit
+pip install ipython
+pip install keras-tuner --upgrade
+pip install -r requirements.txt
+conda create --name figo python=3.7.13 -y
+
+python train_rnn.py --model 'RNN'
+
+
+
+
