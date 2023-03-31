@@ -1874,3 +1874,5 @@ data_collect/Homopolymer/PolymerGasMembraneML/PolymerGasMembraneML-main/step3_tr
 data_collect/Homopolymer/PolymerGasMembraneML/PolymerGasMembraneML-main/step4_screen.py
 data_collect/Homopolymer/PolymerGasMembraneML/PolymerGasMembraneML-main/visualizations.ipynb
 data_collect/Homopolymer/PolymerGasMembraneML/PolymerGasMembraneML-main/workflow.jpg
+pipeline/datasets/copolymer_fps.csv
+pipeline/pre_trained_embeddings/dataset1_chemberta_embeddings.csv
