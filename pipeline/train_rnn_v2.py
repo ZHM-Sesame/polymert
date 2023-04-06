@@ -1,4 +1,5 @@
 from data_loader import load_dataset, load_embeddings
+from data_transformer import get_repeated_polymer
 
 import pandas as pd
 import numpy as np
@@ -73,20 +74,26 @@ def trainRNN(args):
     ncols = len(list(DF.columns))
     
     # fingerprints featurization
-    if(dataset_type == 'homopolymers'):
-        fp = DF['mono'].apply(lambda m: embeddings[m])
-        fp = list(fp)
-    else:
-        DF = pd.get_dummies(DF, prefix=['chain_arch'], columns=['chain_arch'])
-        nbits += (len(list(DF.columns)) - ncols + 1)
-        fp = DF.apply(lambda x: np.append((np.array(embeddings[x['monoA']]) * x['fracA'] + np.array(embeddings[x['monoB']]) * x['fracB']), [x['chain_arch_alternating'], x['chain_arch_block'], x['chain_arch_random']]), axis=1)
-        fp = list(fp)
+    # if(dataset_type == 'homopolymers'):
+    #     fp = DF['mono'].apply(lambda m: embeddings[m])
+    #     fp = list(fp)
+    # else:
+    #     DF = pd.get_dummies(DF, prefix=['chain_arch'], columns=['chain_arch'])
+    #     nbits += (len(list(DF.columns)) - ncols + 1)
+    #     fp = DF.apply(lambda x: np.append((np.array(embeddings[x['monoA']]) * x['fracA'] + np.array(embeddings[x['monoB']]) * x['fracB']), [x['chain_arch_alternating'], x['chain_arch_block'], x['chain_arch_random']]), axis=1)
+    #     fp = list(fp)
     
-    fp_array = np.asarray([np.array(fp[i]) for i in range(len(fp))])
+    # fp_array = np.asarray([np.array(fp[i]) for i in range(len(fp))])
+    
+    # repetitions = args.repetitions
+    # Mix_X_100Block = np.repeat(fp_array, repetitions, axis=0)
+    # Mix_X_100Block = Mix_X_100Block.reshape(len(DF), repetitions, nbits)
     
     repetitions = args.repetitions
-    Mix_X_100Block = np.repeat(fp_array, repetitions, axis=0)
-    Mix_X_100Block = Mix_X_100Block.reshape(len(DF), repetitions, nbits)
+    repetition_format = args.rep_style
+    
+    Mix_X_100Block = get_repeated_polymer(DF, embeddings, nbits, repetition_format=repetition_format, homopolymer=False, repetitions=repetitions)
+    
     X_train, X_test, y_train, y_test = train_test_split(Mix_X_100Block, DF['value'], test_size=0.2, random_state=11)
     
     X_train = X_train.astype('float')
@@ -129,16 +136,14 @@ def trainRNN(args):
     
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, required = False, default = 'RNN', help='Choose either "MUL" or"RNN"')
-    parser.add_argument('--prop', type=str, required = False, default = 'ip', help='ip or ea')
-    parser.add_argument('--data', type=str, required = False, default = '../final_dataset/copolymers', help='data directory')
-    parser.add_argument('--dataset', type=str, required = False, default = 'copolymers', help='=> "copolymers" or "homopolymers"')
-    #parser.add_argument('--embedding', type=str, required = False, default = '../pre_trained_embeddings/chemberta.csv', help='embedding type')
-    parser.add_argument('--embedding', type=str, required = False, default = '../final_dataset/polymer_fingerprint_mappings/polymer_fingerprint_mappings.csv', help='embedding type')
-    parser.add_argument('--repetitions', type=int, required = False, default = 100, help='repetitions of the monomer unit')
-
+    parser.add_argument('--model', type=str, required=False, default='RNN', help='Choose either "MUL" or"RNN"')
+    parser.add_argument('--prop', type=str, required=False, default='ip', help='ip or ea')
+    parser.add_argument('--data', type=str, required=False, default='../final_dataset/copolymers', help='data directory')
+    parser.add_argument('--dataset', type=str, required=False, default='copolymers', help='=> "copolymers" or "homopolymers"')
+    parser.add_argument('--embedding', type=str, required=False, default='../final_dataset/polymer_fingerprint_mappings/polymer_fingerprint_mappings.csv', help='embedding type')
+    parser.add_argument('--repetitions', type=int, required=False, default=100, help='repetitions of the monomer unit')
+    parser.add_argument('--rep_style', type=str, required=False, default='weighted_add', help='weighted_add or concat')
     parsed_args = parser.parse_args()
 
     trainRNN(parsed_args)

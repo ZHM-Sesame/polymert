@@ -29,12 +29,13 @@ def get_repeated_polymer(df, embeddings, nbits, repetition_format=None, homopoly
       nbits += unique_archs
       fp = df.apply(lambda x: np.append((np.array(embeddings[x['monoA']]) * x['fracA'] + np.array(embeddings[x['monoB']]) * x['fracB']), [x['chain_arch_alternating'], x['chain_arch_block'], x['chain_arch_random']]), axis=1)
     elif repetition_format == "concat":
-      df = pd.get_dummies(df, prefix=['chain_arch'], columns=['chain_arch'])
-      nbits = nbits * 4 + unique_archs
-      fp = df.apply(lambda x: np.append(concatenate_embeddings(x, embeddings), [x['chain_arch_alternating'], x['chain_arch_block'], x['chain_arch_random']]), axis = 1)
+      df = df[df['chain_arch'] != 'random']
+      # df = pd.get_dummies(df, prefix=['chain_arch'], columns=['chain_arch'])
+      nbits = nbits * 4 # + unique_archs
+      fp = df.apply(lambda x: concatenate_embeddings(x, embeddings), axis=1) #, [x['chain_arch_alternating'], x['chain_arch_block'], x['chain_arch_random']]), axis = 1)
 
   fp = list(fp)
   fp_array = np.asarray([np.array(fp[i]) for i in range(len(fp))])
   repeated_polymer = np.repeat(fp_array, repetitions, axis=0)
   repeated_polymer = repeated_polymer.reshape(len(df), repetitions, nbits)
-  return repeated_polymer
+  return nbits, repeated_polymer
