@@ -27,7 +27,7 @@ import subprocess
 import gc
 import csv
 
-gpu_index = 1
+gpu_index = 0
 device = torch.device(f'cuda:{gpu_index}' if torch.cuda.is_available() else 'cpu')
 print(f"Using {device} device")
 
@@ -88,10 +88,42 @@ def train():
     hidden_dim = config.hidden_dim
     num_layers = config.num_layers
     
+    #set embedding path according to embedding choice
+    embedding_choice = embedding_path
+    embedding_dict = {
+        'chemberta': "/home/zmao_umass_edu/pre_trained_embeddings/chemberta.csv",
+        '3dinfomax': "/home/zmao_umass_edu/pre_trained_embeddings/3dinfomax.csv",
+        'unimol': "/home/zmao_umass_edu/pre_trained_embeddings/unimol.csv",
+        'morgan': "/home/zmao_umass_edu/pre_trained_embeddings/morgan_fingerprints.csv",
+    }
+    if embedding_choice in ['chemberta','3dinfomax','unimol', 'morgan']:
+        embedding_path = embedding_dict[embedding_choice]
+    else:
+        print("wrong Embedding choice")
+        return 
     
+    if dataset_type == "copolymers":
+        print(model_choice)
+        if model_choice == "MLP":
+            hidden_dim = 1024
+            num_layers = 9
+            learning_rate = 0.001
+            scheduler_choice == 'CosineAnnealingLR'
+            repetitions = 1
+            rep_style = "weighted_add"
+            
+        elif model_choice == "RNN":
+            lstm_dim = 128
+            linear_dim = 32
+            learning_rate = 0.001
+            scheduler_choice == 'CosineAnnealingLR'
+            repetitions = 100
+            rep_style = "concat"
+
     
+    ##########################################################
     # Set the run name with hyperparameter details
-    run_name = f"{scheduler_choice}_{learning_rate}"
+    run_name = f"{embedding_choice}_{prop}"
     wandb.run.name = run_name
     wandb.run.save()
     
@@ -127,7 +159,7 @@ def train():
     
     nbits, Mix_X_100Block, target = get_repeated_polymer(df, embeddings, nbits, repetition_format, flag, repetitions)
     
-    X_train, X_test, y_train, y_test = train_test_split(Mix_X_100Block, target, test_size=test_portion, shuffle=True)
+    X_train, X_test, y_train, y_test = train_test_split(Mix_X_100Block, target, test_size=test_portion, shuffle=True, random_state=11)
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=11)
 
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
@@ -182,7 +214,7 @@ def train():
         
     elif model_choice == 'MLP':
         input_dim = nbits
-        hidden_dim = hidden_dim #100
+        hidden_dim = hidden_dim
         num_layers = num_layers
 
         output_dim = 1
@@ -233,12 +265,12 @@ def train():
     if not os.path.exists(file_name):
         with open(file_name, mode='w') as file:
             writer = csv.writer(file)
-            writer.writerow(['Scheduler', 'Learning Rate', 'R2', 'MAE', 'RMSE'])
+            writer.writerow(['Embedding', 'Prop', 'R2', 'MAE', 'RMSE'])
 
     # Append the evaluation metrics to the file
     with open(file_name, mode='a') as file:
         writer = csv.writer(file)
-        writer.writerow([scheduler_choice, learning_rate, r2, mae, rmse])
+        writer.writerow([embedding_choice, prop, r2, mae, rmse])
         
     del model, train_dataloader, test_dataloader, val_dataloader, predicted, targets
     del X_train_tensor, y_train_tensor, X_val_tensor, y_val_tensor, X_test_tensor, y_test_tensor
@@ -248,8 +280,6 @@ def train():
     gc.collect()
     
     return
-
-    
 
 if __name__ == '__main__':
     sweep_config = {
@@ -261,15 +291,16 @@ if __name__ == '__main__':
         },
         "parameters": {
             "prop": {
-                "value": 'ip', #"ea"
+                #"value": 'ip', #"ea"
+                "values": ['ip','ea']
             },
             "model_choice": {
                 "value": "MLP",# MLP, RNN 
                 ##change rep_style to weighted_add if MLP.
             },
             "learning_rate": {
-                #"value": 0.001,
-                "values": [0.01, 0.001, 0.0001, 1e-5, 1e-6]
+                "value": 0.001,
+                #"values": [0.01, 0.001, 0.0001, 1e-5, 1e-6]
             },
             "weight_decay": {
                 "value": 1e-6,
@@ -279,13 +310,15 @@ if __name__ == '__main__':
                 "value": 128,
             },
             "num_epochs": {
-                "value": 100,
+                "value": 150,
             },
             "data_path": {
                 "value": "/home/zmao_umass_edu/final_dataset/copolymers",
             },
             "embedding_path": {
-                "value": "/home/zmao_umass_edu/pre_trained_embeddings/chemberta.csv",
+                #"value": 'morgan'
+                #"value": 
+                "values": ['chemberta','3dinfomax','unimol', 'morgan']
             },
             "dataset": {
                 "value": "copolymers",
@@ -302,30 +335,31 @@ if __name__ == '__main__':
                 #"values": [0.5, 0.6, 0.7, 0.8, 0.9]
             },
             "lstm_dim": {
-                "value": 20,
-                #"values": [512]
+                "value": 128,
+                #"values": [20, 32, 64, 128, 256, 512]
             },
             "linear_dim": {
                 "value": 32,
-                #"values": [128]
+                #"values": [10, 16, 32, 64, 128, 256]
             },
             "scheduler": {
-                #"value": "CosineAnnealingLR",
-                "values": ["StepLR", "ExponentialLR", "CosineAnnealingLR", "ReduceLROnPlateau", "Constant"]
+                "value": "CosineAnnealingLR",
+                #"values": ["StepLR", "ExponentialLR", "CosineAnnealingLR", "ReduceLROnPlateau", "Constant"]
             },
             "hidden_dim": {
-                "value": 256,
+                "value": 1024,
+                #"values": [765,1024] 
                 #"values": [32, 64, 100, 128, 256, 512] 
                 #"values": [128, 256, 512, 768, 1024] 
                 #"values": [32, 64, 100]
             },
             "num_layers": {
-                "value": 10,
-                #"values": [2, 3, 4, 5, 6, 7, 8, 9, 10]
+                "value": 9,
+                #"values": [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
                 #"values": [6, 7, 8, 9, 10]
             },
         },
     }
     
-    sweep_id = wandb.sweep(sweep_config, project="MLP_Scheduler_lr-test")
+    sweep_id = wandb.sweep(sweep_config, project="MLP_vipea-exp")
     wandb.agent(sweep_id, train) #count = 5
