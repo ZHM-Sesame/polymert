@@ -21,6 +21,7 @@ from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 import datetime
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+from sklearn.model_selection import KFold
 
 
 device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
@@ -34,6 +35,7 @@ def train(args):
     dataset_type = args.dataset
     repetitions = args.repetitions
     repetition_format = args.rep_style
+    patience = 10
     
     flag = False
     if dataset_type == "homopolymers":
@@ -42,33 +44,42 @@ def train(args):
     nbits, embeddings = load_embeddings(embedding_path)
     df = load_dataset(data_path, dataset_type)
     
-    c = ''
-    if args.prop == 'ip':
+    prop = args.prop
+    if prop == 'ip':
         if dataset_type == 'copolymers':
             prop = "IP" #"Ei"
         elif dataset_type == "homopolymers":
             prop = "Ei"
-    elif args.prop == 'ea':
+        elif dataset_type == 'copolymers_2':
+            prop = "IP_vs_SHE"
+    elif prop == 'ea':
         if dataset_type == 'copolymers':
             prop = "EA" #"Eea"
         elif dataset_type == "homopolymers":
             prop = "Eea"
+        elif dataset_type == 'copolymers_2':
+            prop = "EA_vs_SHE"
+    elif prop == "os":
+        if dataset_type != 'copolymers_2':
+            print("only copolymers_2 has oscillator_strength")
+            return
+        prop = "oscillator_strength"
     else:
         print("unknown property, please use either 'ip' or 'ea'.")
-        return
-    
-    if model_choice not in ['RNN', 'MLP']:
-        print("unkown model")
         return
         
     print("using the Model: "+ model_choice)
     print("using the property: "+ prop)
     df = df[df['property'] == prop]
     ncols = len(list(df.columns))
+    #df = df.head(1000)
     
-    nbits, Mix_X_100Block, target = get_repeated_polymer(df, embeddings, nbits, repetition_format, flag, repetitions)
     
-    X_train, X_test, y_train, y_test = train_test_split(Mix_X_100Block, target, test_size=0.5, shuffle=True) #0.2
+    
+    nbits, Mix_X_100Block, target = get_repeated_polymer(df, embeddings, nbits, repetition_format, dataset_type, repetitions)
+    
+
+    X_train, X_test, y_train, y_test = train_test_split(Mix_X_100Block, target, test_size=0.5, shuffle=True, random_state=11) #0.2 # save the index of the train and test ones.
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=11)
 
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
@@ -79,18 +90,18 @@ def train(args):
 
     X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
     y_test_tensor = torch.tensor(y_test.values, dtype=torch.float32)
-    
+
     train_dataset = MolecularDataset(X_train_tensor, y_train_tensor)
     val_dataset = MolecularDataset(X_val_tensor, y_val_tensor)
     test_dataset = MolecularDataset(X_test_tensor, y_test_tensor)
-    
+
     batch_size = 128
     shuffle = True
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=shuffle)
 
-    num_epochs = 30
+    num_epochs = 500
     if model_choice == 'RNN':
         seq_len = 100
         emb_dim = nbits
@@ -100,17 +111,19 @@ def train(args):
         out_dim = 1
         learning_rate = 0.001
         weight_decay = 0.01 
-        
+
         model = model = RNN(seq_len, emb_dim, lstm_dim, linear_dim, out_dim).to(device)
         loss_fn = nn.MSELoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         
-        train_losses, test_losses = train_RNN(model, train_dataloader, val_dataloader, loss_fn, optimizer, num_epochs, device)
-        
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=0)
+
+        train_losses, test_losses = train_RNN(model, train_dataloader, val_dataloader, loss_fn, optimizer, scheduler, num_epochs, patience, device)
+
     elif model_choice == 'MLP':
         input_dim = nbits
-        hidden_dim = 100
-        num_layers = 3
+        hidden_dim = 1024
+        num_layers = 9
 
         output_dim = 1
         learning_rate = 0.001
@@ -119,8 +132,11 @@ def train(args):
 
         loss_fn = nn.MSELoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-        train_losses, test_losses = train_MLP(model, train_dataloader, val_dataloader, loss_fn, optimizer, num_epochs, device)
-    
+
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=0)
+
+        train_losses, test_losses = train_MLP(model, train_dataloader, val_dataloader, loss_fn, optimizer, scheduler, num_epochs, patience, device)
+
     current_time = time.strftime("%Y%m%d-%H%M%S")
     model_path = f"models/model_{model_choice}_{prop}_{current_time}.pt"
 

@@ -18,7 +18,7 @@ def load_dataset(dataset_path, dataset_name):
 
     # 'copolymers' schema: monoA,monoB,fracA,fracB,chain_arch,property,value
     # 'homopolymers' schema: mono,property,value
-    if dataset_name == 'homopolymers' or dataset_name == 'copolymers':
+    if dataset_name in ['homopolymers', 'copolymers', 'copolymers_2']:
         return df
     elif dataset_name == 'both':
         homopolymer_df = load_dataset(dataset_path, 'homopolymers')
@@ -80,15 +80,19 @@ def concatenate_embeddings(row, embeddings, repetitions):
     return repeated_polymer
 
 
-def get_repeated_polymer(df, embeddings, nbits, repetition_format=None, homopolymer=True, repetitions=400):
-    if homopolymer:
+def get_repeated_polymer(df, embeddings, nbits, repetition_format=None, dataset_type="copolymers", repetitions=400):
+    if dataset_type == "homopolymers":
         fp = df['mono'].apply(lambda smile: embeddings[smile])
     else:
         unique_archs = df['chain_arch'].nunique()
         if repetition_format == "weighted_add":
             df = pd.get_dummies(df, prefix=['chain_arch'], columns=['chain_arch'])
             nbits += unique_archs
-            fp = df.apply(lambda x: np.append((np.array(embeddings[x['monoA']]) * x['fracA'] + np.array(embeddings[x['monoB']]) * x['fracB']), [x['chain_arch_alternating'], x['chain_arch_block'], x['chain_arch_random']]), axis=1)
+            if dataset_type == "copolymers":
+                fp = df.apply(lambda x: np.append((np.array(embeddings[x['monoA']]) * x['fracA'] + np.array(embeddings[x['monoB']]) * x['fracB']), [x['chain_arch_alternating'], x['chain_arch_block'], x['chain_arch_random']]), axis=1)
+            elif dataset_type == "copolymers_2":
+                fp = df.apply(lambda x: np.append((np.array(embeddings[x['monoA']]) * x['fracA'] + np.array(embeddings[x['monoB']]) * x['fracB']), [x['chain_arch_alternating']]), axis=1)
+            
         elif repetition_format == "concat":
             fp = df.apply(lambda x: concatenate_embeddings(x, embeddings, repetitions), axis=1)
     

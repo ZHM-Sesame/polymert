@@ -87,6 +87,7 @@ def train():
     scheduler_choice = config.scheduler
     hidden_dim = config.hidden_dim
     num_layers = config.num_layers
+    patience = 10
     
     #set embedding path according to embedding choice
     embedding_choice = embedding_path
@@ -96,8 +97,18 @@ def train():
         'unimol': "/home/zmao_umass_edu/pre_trained_embeddings/unimol.csv",
         'morgan': "/home/zmao_umass_edu/pre_trained_embeddings/morgan_fingerprints.csv",
     }
+    embedding_dict_2 = {
+        'chemberta': "/home/zmao_umass_edu/pre_trained_embeddings/chemberta_embeddings_2.csv",
+        '3dinfomax': "/home/zmao_umass_edu/pre_trained_embeddings/3dinfomax_dataset_2.csv",
+        'unimol': "/home/zmao_umass_edu/pre_trained_embeddings/unimol_dataset_2.csv",
+        'morgan': "/home/zmao_umass_edu/pre_trained_embeddings/dataset_2_fingerprint_mappings.csv",
+    }
+    
     if embedding_choice in ['chemberta','3dinfomax','unimol', 'morgan']:
-        embedding_path = embedding_dict[embedding_choice]
+        if dataset_type in ['copolymers', 'copolymers']:
+            embedding_path = embedding_dict[embedding_choice]
+        elif dataset_type == 'copolymers_2':
+            embedding_path = embedding_dict_2[embedding_choice]
     else:
         print("wrong Embedding choice")
         return 
@@ -127,6 +138,9 @@ def train():
     wandb.run.name = run_name
     wandb.run.save()
     
+    current_time = time.strftime("%Y%m%d-%H%M%S")
+    model_path = f"models/model_{model_choice}_{prop}_{current_time}.pt"
+    
     flag = False
     if dataset_type == "homopolymers":
         flag = True
@@ -139,13 +153,27 @@ def train():
             prop = "IP" #"Ei"
         elif dataset_type == "homopolymers":
             prop = "Ei"
+        elif dataset_type == 'copolymers_2':
+            prop = "IP_vs_SHE"
     elif prop == 'ea':
         if dataset_type == 'copolymers':
             prop = "EA" #"Eea"
         elif dataset_type == "homopolymers":
             prop = "Eea"
+        elif dataset_type == 'copolymers_2':
+            prop = "EA_vs_SHE"
+    elif prop == "os":
+        if dataset_type != 'copolymers_2':
+            print("only copolymers_2 has oscillator_strength")
+            return
+        prop = "oscillator_strength"
+    elif prop == 'og':
+        if dataset_type != 'copolymers_2':
+            print("only copolymers_2 has oscillator_strength")
+            return
+        prop = "optical_gap"
     else:
-        print("unknown property, please use either 'ip' or 'ea'.")
+        print("unknown property, please use either 'ip', 'ea', 'os' or 'og'.")
         return
     
     if model_choice not in ['RNN', 'MLP']:
@@ -157,7 +185,7 @@ def train():
     df = df[df['property'] == prop]
     ncols = len(list(df.columns))
     
-    nbits, Mix_X_100Block, target = get_repeated_polymer(df, embeddings, nbits, repetition_format, flag, repetitions)
+    nbits, Mix_X_100Block, target = get_repeated_polymer(df, embeddings, nbits, repetition_format, dataset_type, repetitions)
     
     X_train, X_test, y_train, y_test = train_test_split(Mix_X_100Block, target, test_size=test_portion, shuffle=True, random_state=11)
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=11)
@@ -210,7 +238,7 @@ def train():
         elif scheduler_choice == 'Constant':
             scheduler = None
         
-        train_losses, test_losses = train_RNN(model, train_dataloader, val_dataloader, loss_fn, optimizer, scheduler, num_epochs, device, wandb_log = True)
+        train_losses, test_losses = train_RNN(model, train_dataloader, val_dataloader, loss_fn, optimizer, scheduler, num_epochs, patience, device, wandb_log = True, model_path = model_path)
         
     elif model_choice == 'MLP':
         input_dim = nbits
@@ -237,10 +265,7 @@ def train():
         elif scheduler_choice == 'Constant':
             scheduler = None
         
-        train_losses, test_losses = train_MLP(model, train_dataloader, val_dataloader, loss_fn, optimizer, scheduler, num_epochs, device, wandb_log = True)
-    
-    current_time = time.strftime("%Y%m%d-%H%M%S")
-    model_path = f"models/model_{model_choice}_{prop}_{current_time}.pt"
+        train_losses, test_losses = train_MLP(model, train_dataloader, val_dataloader, loss_fn, optimizer, scheduler, num_epochs, patience, device, wandb_log = True, model_path = model_path)
     
     ##### stop saving to save space
     torch.save(model.state_dict(), model_path)
@@ -265,7 +290,7 @@ def train():
     if not os.path.exists(file_name):
         with open(file_name, mode='w') as file:
             writer = csv.writer(file)
-            writer.writerow(['Embedding', 'Prop', 'R2', 'MAE', 'RMSE'])
+            writer.writerow(['Embedding', 'prop', 'R2', 'MAE', 'RMSE'])
 
     # Append the evaluation metrics to the file
     with open(file_name, mode='a') as file:
@@ -291,11 +316,11 @@ if __name__ == '__main__':
         },
         "parameters": {
             "prop": {
-                #"value": 'ip', #"ea"
-                "values": ['ip','ea']
+                #"value": 'og', #"ea" #"os"
+                "values": ['ip','ea', 'os', 'og']
             },
             "model_choice": {
-                "value": "MLP",# MLP, RNN 
+                "value": "RNN",# MLP, RNN 
                 ##change rep_style to weighted_add if MLP.
             },
             "learning_rate": {
@@ -310,25 +335,26 @@ if __name__ == '__main__':
                 "value": 128,
             },
             "num_epochs": {
-                "value": 150,
+                "value": 100,
             },
             "data_path": {
                 "value": "/home/zmao_umass_edu/final_dataset/copolymers",
             },
             "embedding_path": {
                 #"value": 'morgan'
-                #"value": 
+                #"values":  ['unimol']
                 "values": ['chemberta','3dinfomax','unimol', 'morgan']
             },
             "dataset": {
-                "value": "copolymers",
+                "value": "copolymers_2", 
+                # "values": ['copolymers','homopolymers','copolymers_2']
             },
             "repetitions": {
-                "value": 1, #100
+                "value": 100, #100
             },
             "rep_style": {
                 #MLP uses weighted_add only.
-                "value": "weighted_add", #"weighted_add, concat"
+                "value": "concat", #"weighted_add, concat"
             },
             "test_portion": {
                 "value": 0.2,
@@ -361,5 +387,5 @@ if __name__ == '__main__':
         },
     }
     
-    sweep_id = wandb.sweep(sweep_config, project="MLP_vipea-exp")
+    sweep_id = wandb.sweep(sweep_config, project="RNN_copo2_all-exp")
     wandb.agent(sweep_id, train) #count = 5

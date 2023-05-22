@@ -105,11 +105,13 @@ class RNN(nn.Module):
         return f'RNN Model:\n{layer_str}'
 
     
-def train_RNN(model, train_loader, test_loader, loss_fn, optimizer, scheduler, num_epochs=10, device="cpu", wandb_log = False):
+def train_RNN(model, train_loader, test_loader, loss_fn, optimizer, scheduler, num_epochs=10, patience = 10, device="cpu", wandb_log = False, model_path = 'model.pt'):
     model.to(device)
     train_losses = []
     test_losses = []
 
+    counter = 0
+    best_test_loss = None
     for epoch in range(num_epochs):
         # Training
         model.train()
@@ -138,7 +140,7 @@ def train_RNN(model, train_loader, test_loader, loss_fn, optimizer, scheduler, n
         train_loss /= len(train_loader)
         train_losses.append(train_loss)
 
-        # Testing
+        # Validating
         model.eval()
         test_loss = 0
         with torch.no_grad():
@@ -164,5 +166,19 @@ def train_RNN(model, train_loader, test_loader, loss_fn, optimizer, scheduler, n
                 scheduler.step(test_loss)
             else:
                 scheduler.step()
+                
+        ### Early Stopping
+        if best_test_loss is None or test_loss < best_test_loss:
+            best_test_loss = test_loss
+            # Save model
+            torch.save(model.state_dict(), model_path)  
+            counter = 0
+        else:
+            counter += 1
+            if counter >= 5:
+                print(f'Early stopping counter: {counter} out of {patience}')
+            if counter >= patience:
+                print('Early stopping triggered')
+                break  # Exit the loop
 
     return train_losses, test_losses
