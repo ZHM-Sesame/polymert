@@ -1,4 +1,4 @@
-from utils import load_dataset, load_embeddings, get_repeated_polymer, MolecularDataset, evaluate_model
+from utils import * #load_dataset, load_embeddings, get_repeated_polymer, MolecularDataset, evaluate_model
 from rnn import MolecularRNNDataset, RNN, train_RNN
 from mlp import TrimerMLPDataset, MLP, train_MLP
 
@@ -45,27 +45,9 @@ def train(args):
     df = load_dataset(data_path, dataset_type)
     
     prop = args.prop
-    if prop == 'ip':
-        if dataset_type == 'copolymers':
-            prop = "IP" #"Ei"
-        elif dataset_type == "homopolymers":
-            prop = "Ei"
-        elif dataset_type == 'copolymers_2':
-            prop = "IP_vs_SHE"
-    elif prop == 'ea':
-        if dataset_type == 'copolymers':
-            prop = "EA" #"Eea"
-        elif dataset_type == "homopolymers":
-            prop = "Eea"
-        elif dataset_type == 'copolymers_2':
-            prop = "EA_vs_SHE"
-    elif prop == "os":
-        if dataset_type != 'copolymers_2':
-            print("only copolymers_2 has oscillator_strength")
-            return
-        prop = "oscillator_strength"
-    else:
-        print("unknown property, please use either 'ip' or 'ea'.")
+    
+    prop = load_prop(prop, dataset_type) #from utils
+    if not prop: 
         return
         
     print("using the Model: "+ model_choice)
@@ -77,6 +59,9 @@ def train(args):
     
     
     nbits, Mix_X_100Block, target = get_repeated_polymer(df, embeddings, nbits, repetition_format, dataset_type, repetitions)
+    
+    print(Mix_X_100Block.shape)
+    
     
 
     X_train, X_test, y_train, y_test = train_test_split(Mix_X_100Block, target, test_size=0.5, shuffle=True, random_state=11) #0.2 # save the index of the train and test ones.
