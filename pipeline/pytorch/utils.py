@@ -101,7 +101,7 @@ def get_repeated_polymer(df, embeddings, nbits, repetition_format=None, dataset_
 
     repeated_polymer = fp_array.reshape(len(df), repetitions, nbits)
     
-    return nbits, repeated_polymer, df['value']
+    return nbits, repeated_polymer, np.asarray(df['value'])
 
 
 class MolecularDataset(Dataset):

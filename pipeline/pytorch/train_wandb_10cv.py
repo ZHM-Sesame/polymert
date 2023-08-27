@@ -95,10 +95,10 @@ def train():
     #set embedding path according to embedding choice
     embedding_choice = embedding_path
     embedding_dict = {
-        'chemberta': "/home/zmao_umass_edu/pre_trained_embeddings/chemberta.csv",
-        '3dinfomax': "/home/zmao_umass_edu/pre_trained_embeddings/3dinfomax.csv",
-        'unimol': "/home/zmao_umass_edu/pre_trained_embeddings/unimol.csv",
-        'morgan': "/home/zmao_umass_edu/pre_trained_embeddings/morgan_fingerprints.csv",
+        'chemberta': "/home/stallam_umass_edu/new_changes/polymertl/pre_trained_embeddings/chemberta.csv",
+        '3dinfomax': "/home/stallam_umass_edu/new_changes/polymertl/pre_trained_embeddings/3dinfomax.csv",
+        'unimol': "/home/stallam_umass_edu/new_changes/polymertl/pre_trained_embeddings/unimol.csv",
+        'morgan': "/home/stallam_umass_edu/new_changes/polymertl/pre_trained_embeddings/morgan_fingerprints.csv",
     }
     embedding_dict_2 = {
         'chemberta': "/home/zmao_umass_edu/pre_trained_embeddings/chemberta_embeddings_2.csv",
@@ -122,7 +122,7 @@ def train():
             hidden_dim = 1024
             num_layers = 9
             learning_rate = 0.001
-            scheduler_choice == 'CosineAnnealingLR'
+            scheduler_choice = 'CosineAnnealingLR'
             repetitions = 1
             rep_style = "weighted_add"
             
@@ -130,7 +130,7 @@ def train():
             lstm_dim = 128
             linear_dim = 32
             learning_rate = 0.001
-            scheduler_choice == 'CosineAnnealingLR'
+            scheduler_choice = 'CosineAnnealingLR'
             repetitions = 100
             rep_style = "concat"
     
@@ -353,7 +353,7 @@ if __name__ == '__main__':
                 "values": ['ip','ea', 'os', 'og']
             },
             "model_choice": {
-                "value": "MLP",# MLP, RNN 
+                "value": "RNN" #"MLP"
                 ##change rep_style to weighted_add if MLP.
             },
             "learning_rate": {
@@ -371,7 +371,7 @@ if __name__ == '__main__':
                 "value": 200,
             },
             "data_path": {
-                "value": "/home/zmao_umass_edu/final_dataset/copolymers",
+                "value": "/home/stallam_umass_edu/new_changes/polymertl/final_dataset/copolymers",
             },
             "embedding_path": {
                 #"value": 'morgan'
@@ -383,11 +383,11 @@ if __name__ == '__main__':
                 # "values": ['copolymers','homopolymers','copolymers_2']
             },
             "repetitions": {
-                "value": 1, #100
+                "value": 100, #100
             },
             "rep_style": {
                 #MLP uses weighted_add only.
-                "value": "weighted_add", #"weighted_add, concat"
+                "value": "concat", #"weighted_add", #"weighted_add, concat"
             },
             "test_portion": {
                 "value": 0.2,
