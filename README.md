@@ -10,7 +10,6 @@ pip install -r requirements.txt
 ``` 
 
 # Getting data
-### @Zihao: add instructions here 
 Details about the datasets are listed below. 
 Preprocessing will be implemented later to clean the data. 
 
